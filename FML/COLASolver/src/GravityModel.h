@@ -473,9 +473,9 @@ class GravityModel {
     double aini;
 
     // Ranges for splines of growth-factors
-    double alow = 1e-4;
+    double alow = 1e-10;
     const double ahigh = 1e1;
-    const int npts_loga = 1000;
+    const int npts_loga = 2500;
     const double koverH0low = 1e-4 / H0_hmpc;
     const double koverH0high = 100.0 / H0_hmpc;
     const int npts_logk = 200;
