@@ -756,6 +756,12 @@ namespace FML {
                 if (FML::PARTICLE::has_get_q<T>())
                     std::cout << "# Particle has [Lagrangian position] ("
                               << sizeof(FML::PARTICLE::GetLagrangianPos(tmp)[0]) * N << " bytes)\n";
+                if (FML::PARTICLE::has_get_delta_q<T>())
+                    std::cout << "# Particle has [Lagrangian overdensity] ("
+                              << sizeof(FML::PARTICLE::GetLagrangianDelta(tmp)) << " bytes)\n";
+                if (FML::PARTICLE::has_get_delta2_q<T>())
+                    std::cout << "# Particle has [Lagrangian overdensity squared] ("
+                              << sizeof(FML::PARTICLE::GetLagrangianDelta2(tmp)) << " bytes)\n";
                 std::cout << "# Total size of particle is " << FML::PARTICLE::GetSize(tmp) << " bytes\n";
                 std::cout << "# We will make " << Npart_1D << "^" << N << " particles\n";
                 std::cout << "# Plus a buffer with room for " << (buffer_factor - 1.0) * 100.0 << "%% more particles\n";
