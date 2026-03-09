@@ -996,6 +996,38 @@ namespace FML {
                 }
             }
 
+            // Set Lagrangian overdensity of the particle if we have that available
+            if constexpr (FML::PARTICLE::has_get_delta_q<T>()) {
+                FFTWGrid<N> delta_real = delta_fourier; // copy
+                delta_real.fftw_c2r(); // to real space
+                std::vector<FML::GRID::FloatType> weights;
+                weights.reserve(part.get_npart());
+                FML::INTERPOLATION::interpolate_grid_to_particle_positions<N, T>(delta_real, part.get_particles_ptr(), part.get_npart(), weights, interpolation_method);
+                for (size_t i = 0; i < part.get_npart(); i++) {
+                    part[i].delta_q = weights[i];
+                }
+                if (FML::ThisTask == 0) {
+                    std::cout << "Storing Lagrangian overdensity delta(q) in particle\n";
+                    std::cout << "Minimum Lagrangian overdensity delta(q): " << *std::min_element(weights.begin(), weights.end()) << std::endl;
+                    std::cout << "Maximum Lagrangian overdensity delta(q): " << *std::max_element(weights.begin(), weights.end()) << std::endl;
+                }
+
+                if constexpr (FML::PARTICLE::has_get_delta2_q<T>()) {
+                    FFTWGrid<N> delta2_real = delta_real;
+                    delta2_real.fill_real_grid([](std::array<FML::GRID::FloatType, 3> &, FML::GRID::FloatType delta) { return delta * delta; }); // delta^2
+                    weights.clear();
+                    FML::INTERPOLATION::interpolate_grid_to_particle_positions<N, T>(delta2_real, part.get_particles_ptr(), part.get_npart(), weights, interpolation_method);
+                    for (size_t i = 0; i < part.get_npart(); i++) {
+                        part[i].delta2_q = weights[i];
+                    }
+                    if (FML::ThisTask == 0) {
+                        std::cout << "Storing Lagrangian overdensity squared delta^2(q) in particle\n";
+                        std::cout << "Minimum Lagrangian overdensity squared delta^2(q): " << *std::min_element(weights.begin(), weights.end()) << std::endl;
+                        std::cout << "Maximum Lagrangian overdensity squared delta^2(q): " << *std::max_element(weights.begin(), weights.end()) << std::endl;
+                    }
+                }
+            }
+
             // Compute and add displacements
             // NB: we must do this in one go as add_displacement changes the position of the particles
             std::array<std::vector<FML::GRID::FloatType>, N> displacements_1LPT;
