@@ -737,7 +737,7 @@ namespace FML {
                 if (FML::PARTICLE::has_get_vel<T>())
                     std::cout << "# Particle has [Velocity] v_code = a^2 dxdt / (H0 Box) ("
                               << sizeof(FML::PARTICLE::GetPos(tmp)[0]) * N << " bytes)\n";
-                if (FML::PARTICLE::has_set_mass<T>())
+                if (FML::PARTICLE::has_get_mass<T>())
                     std::cout << "# Particle has [Mass] (" << sizeof(FML::PARTICLE::GetMass(tmp)) << " bytes)\n";
                 if (FML::PARTICLE::has_set_id<T>())
                     std::cout << "# Particle has [ID] (" << sizeof(FML::PARTICLE::GetID(tmp)) << " bytes)\n";

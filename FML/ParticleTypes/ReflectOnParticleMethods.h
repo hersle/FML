@@ -400,7 +400,7 @@ namespace FML {
                     std::cout << "# Particle has [Velocity] (" << sizeof(FML::PARTICLE::GetPos(tmp)[0]) * N
                               << " bytes)\n";
 
-                if constexpr (FML::PARTICLE::has_set_mass<T>())
+                if constexpr (FML::PARTICLE::has_get_mass<T>())
                     std::cout << "# Particle has [Mass] (" << sizeof(FML::PARTICLE::GetMass(tmp)) << " bytes)\n";
 
                 if constexpr (FML::PARTICLE::has_set_id<T>())

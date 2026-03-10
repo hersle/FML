@@ -70,6 +70,12 @@ class Particle {
     void set_id(long long int _id) { id = _id; }
 
     //=============================================================
+    // Mass (for weighting in when interpolating particles to grid)
+    //=============================================================
+    double mass;
+    double get_mass() const { return mass; }
+
+    //=============================================================
     // Initial Lagrangian position and functions thereof (delta, ...)
     // Only needed for COLA with scaledependent growth
     // NB: should ideally have same type as [pos] to avoid truncating the
