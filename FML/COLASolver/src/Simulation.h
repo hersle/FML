@@ -273,6 +273,8 @@ class NBodySimulation {
     template <int _NDIM, class _T>
     friend void compute_power_spectrum(NBodySimulation<_NDIM, _T> & sim, double redshift, std::string snapshot_folder);
     template <int _NDIM, class _T>
+    friend void compute_power_spectrum_bias(NBodySimulation<_NDIM, _T> & sim, double redshift, std::string snapshot_folder);
+    template <int _NDIM, class _T>
     friend void
     compute_power_spectrum_multipoles(NBodySimulation<_NDIM, _T> & sim, double redshift, std::string snapshot_folder);
     template <int _NDIM, class _T>
@@ -1677,6 +1679,7 @@ void NBodySimulation<NDIM, T>::analyze_and_output(int ioutput, double redshift) 
     if (pofk) {
         timer.StartTiming("Power-spectrum");
         compute_power_spectrum(*this, redshift, snapshot_folder);
+        compute_power_spectrum_bias(*this, redshift, snapshot_folder);
         timer.EndTiming("Power-spectrum");
     }
 
