@@ -170,7 +170,7 @@ namespace FML {
             void fill_fourier_grid(const ComplexType val);
 
             /// Fill the main grid from a function specifying the value at a given position
-            void fill_real_grid(std::function<FloatType(std::array<double, N> &)> & func);
+            void fill_real_grid(const std::function<FloatType(std::array<double, N> &, FloatType)> & func);
             /// Fill the main grid from a function specifying the value at a given fourier wave-vector
             void fill_fourier_grid(std::function<ComplexType(std::array<double, N> &)> & func);
 
@@ -604,7 +604,7 @@ namespace FML {
         }
 
         template <int N>
-        void FFTWGrid<N>::fill_real_grid(std::function<FloatType(std::array<double, N> &)> & func) {
+        void FFTWGrid<N>::fill_real_grid(const std::function<FloatType(std::array<double, N> &, FloatType)> & func) {
 #ifdef DEBUG_FFTWGRID
             if (not grid_is_in_real_space) {
                 if (FML::ThisTask == 0)
@@ -619,8 +619,9 @@ namespace FML {
             for (int islice = 0; islice < Local_nx; islice++) {
                 for (auto && real_index : get_real_range(islice, islice + 1)) {
                     auto coord = get_coord_from_index(real_index);
+                    auto value = get_real_from_index(real_index);
                     auto pos = get_real_position(coord);
-                    auto value = func(pos);
+                    value = func(pos, value);
                     set_real_from_index(real_index, value);
                 }
             }
