@@ -213,6 +213,10 @@ namespace FML {
             /// Add to value in grid
             void add_real(const std::array<int, N> & coord, const FloatType value);
 
+            /// Get sum and mean of all (global) real cell values
+            FloatType sum() const;
+            FloatType mean() const;
+
             /// Set value of cell in fourier grid using (local) coordinate in Local_nx x [0,Nmesh)^(Ndim-2) x
             /// [0,Nmesh/2+1)
             void set_fourier(const std::array<int, N> & coord, const ComplexType value);
@@ -1016,6 +1020,34 @@ namespace FML {
             IndexIntType index = get_index_real(coord);
             get_real_grid()[index] += value;
         }
+
+        template <int N>
+        FloatType FFTWGrid<N>::sum() const {
+#ifdef DEBUG_FFTWGRID
+            if (not grid_is_in_real_space) {
+                if (FML::ThisTask == 0)
+                    std::cout << "Warning: [FFTWGrid::fill_real_grid] The grid status is [Fourierspace]. Label: " +
+                                     name + "\n";
+            }
+#endif
+            FloatType tot = 0.0;
+            #ifdef USE_OMP
+            #pragma omp parallel for reduction(+ : tot)
+            #endif
+            for (int islice = 0; islice < Local_nx; islice++) {
+                for (auto && real_index : get_real_range(islice, islice + 1)) {
+                    tot += get_real_from_index(real_index);
+                }
+            }
+            FML::SumOverTasks(&tot);
+            return tot;
+        }
+
+        template <int N>
+        FloatType FFTWGrid<N>::mean() const {
+            return sum() / std::pow(get_nmesh(), N);
+        }
+
 
         template <int N>
         void FFTWGrid<N>::set_real_from_index(const IndexIntType index, const FloatType value) {
