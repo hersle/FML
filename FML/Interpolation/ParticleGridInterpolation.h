@@ -73,7 +73,12 @@ namespace FML {
         void interpolate_grid_to_particle_positions(const FFTWGrid<N> & grid,
                                                     const T * part,
                                                     size_t NumPart,
-                                                    std::vector<FloatType> & interpolated_values);
+                                                    std::vector<float> & interpolated_values);
+
+        template <int N, int ORDER, class T>
+        void interpolate_grid_to_particle_positions_and_set_weight(const FFTWGrid<N> & grid,
+                                                    T * part,
+                                                    size_t NumPart);
 
         /// @brief Interpolate a vector of grids (e.g. force vector) to a set of positions given by the positions of
         /// particles.
@@ -111,7 +116,13 @@ namespace FML {
         void interpolate_grid_to_particle_positions(const FFTWGrid<N> & grid,
                                                     const T * part,
                                                     size_t NumPart,
-                                                    std::vector<FloatType> & interpolated_values,
+                                                    std::vector<float> & interpolated_values,
+                                                    std::string interpolation_method);
+
+        template <int N, class T>
+        void interpolate_grid_to_particle_positions_and_set_weight(const FFTWGrid<N> & grid,
+                                                    T * part,
+                                                    size_t NumPart,
                                                     std::string interpolation_method);
 
         /// @brief Interpolate a vector of grids to a set of positions given by the positions of particles.
@@ -242,7 +253,7 @@ namespace FML {
         void interpolate_grid_to_particle_positions(const FFTWGrid<N> & grid,
                                                     const T * part,
                                                     size_t NumPart,
-                                                    std::vector<FloatType> & interpolated_values,
+                                                    std::vector<float> & interpolated_values,
                                                     std::string interpolation_method) {
             if (interpolation_method.compare("NGP") == 0)
                 interpolate_grid_to_particle_positions<N, 1, T>(grid, part, NumPart, interpolated_values);
@@ -255,6 +266,41 @@ namespace FML {
             if (interpolation_method.compare("PQS") == 0)
                 interpolate_grid_to_particle_positions<N, 5, T>(grid, part, NumPart, interpolated_values);
         }
+
+        template <int N, class T>
+        void interpolate_grid_to_particle_positions_and_set_weight(const FFTWGrid<N> & grid,
+                                                    T * part,
+                                                    size_t NumPart,
+                                                    std::string interpolation_method) {
+            if (interpolation_method.compare("NGP") == 0)
+                interpolate_grid_to_particle_positions_and_set_weight<N, 1, T>(grid, part, NumPart);
+            if (interpolation_method.compare("CIC") == 0)
+                interpolate_grid_to_particle_positions_and_set_weight<N, 2, T>(grid, part, NumPart);
+            if (interpolation_method.compare("TSC") == 0)
+                interpolate_grid_to_particle_positions_and_set_weight<N, 3, T>(grid, part, NumPart);
+            if (interpolation_method.compare("PCS") == 0)
+                interpolate_grid_to_particle_positions_and_set_weight<N, 4, T>(grid, part, NumPart);
+            if (interpolation_method.compare("PQS") == 0)
+                interpolate_grid_to_particle_positions_and_set_weight<N, 5, T>(grid, part, NumPart);
+        }
+
+        /*template <int N, class T>
+        void interpolate_grid_to_particle_positions(const FFTWGrid<N> & grid,
+                                                    const T * part,
+                                                    size_t NumPart,
+                                                    std::vector<FloatType> & interpolated_values,
+                                                    std::string interpolation_method) {
+            if (interpolation_method.compare("NGP") == 0)
+                interpolate_grid_to_particle_positions<N, 1, T>(grid, part, NumPart, interpolated_values);
+            if (interpolation_method.compare("CIC") == 0)
+                interpolate_grid_to_particle_positions<N, 2, T>(grid, part, NumPart, interpolated_values);
+            if (interpolation_method.compare("TSC") == 0)
+                interpolate_grid_to_particle_positions<N, 3, T>(grid, part, NumPart, interpolated_values);
+            if (interpolation_method.compare("PCS") == 0)
+                interpolate_grid_to_particle_positions<N, 4, T>(grid, part, NumPart, interpolated_values);
+            if (interpolation_method.compare("PQS") == 0)
+                interpolate_grid_to_particle_positions<N, 5, T>(grid, part, NumPart, interpolated_values);
+        }*/
 
         /// @brief Get the interpolation order from a string holding the density_assignment_method (NGP, CIC, ...).
         /// Needed for the Fourier-space window function
@@ -512,7 +558,7 @@ namespace FML {
                 }
                 SumOverTasks(&mean_mass);
                 mean_mass /= double(NumPartTot);
-                norm_fac /= mean_mass;
+                //norm_fac /= mean_mass;
             }
 
             // Loop over all particles and add them to the grid
@@ -795,10 +841,148 @@ namespace FML {
         }
 
         template <int N, int ORDER, class T>
+        void interpolate_grid_to_particle_positions_and_set_weight(const FFTWGrid<N> & grid,
+                                                    T * part,
+                                                    size_t NumPart) {
+
+            auto nextra = get_extra_slices_needed_by_order<ORDER>();
+            assert_mpi(grid.get_nmesh() > 0,
+                       "[interpolate_grid_to_particle_positions] Grid has to be already allocated!\n");
+            assert_mpi(grid.get_n_extra_slices_left() >= nextra.first and
+                           grid.get_n_extra_slices_right() >= nextra.second,
+                       "[interpolate_grid_to_particle_positions] Too few extra slices\n");
+
+            // We need to look at width^N cells in total
+            constexpr int widthtondim = FML::power(ORDER, N);
+
+            // Fetch grid information
+            const auto Local_nx = grid.get_local_nx();
+            const auto Local_x_start = grid.get_local_x_start();
+            const int Nmesh = grid.get_nmesh();
+            
+
+            //FML::PARTICLE::swap_eulerian_and_lagrangian_positions(T * part, part.get_npart());
+            //part.communicate_particles();
+
+#ifdef USE_OMP
+#pragma omp parallel for
+#endif
+            for (size_t ind = 0; ind < NumPart; ind++) {
+
+                // Positions in global grid in units of [Nmesh]                
+                const auto * pos = FML::PARTICLE::GetPos(part[ind]);
+                std::array<double, N> x;
+                for (int idim = 0; idim < N; idim++)
+                    x[idim] = pos[idim] * Nmesh;
+
+                // Nearest grid-node in grid
+                // Also do some santity checks. Probably better to throw here if these tests kick in
+                std::array<int, N> ix;
+                [[maybe_unused]] std::array<int, N> ix_nbor;
+                for (int idim = 0; idim < N; idim++) {
+                    ix[idim] = int(x[idim]);
+                    if (idim == 0) {
+                        if (ix[0] == (Local_x_start + Local_nx))
+                            ix[0] = int(Local_x_start + Local_nx) - 1;
+                        if (ix[0] < Local_x_start)
+                            ix[0] = int(Local_x_start);
+                    } else {
+                        if (ix[idim] == Nmesh)
+                            ix[idim] = Nmesh - 1;
+                    }
+                }
+
+                // Positions to distance from neareste grid-node
+                for (int idim = 0; idim < N; idim++) {
+                    x[idim] -= ix[idim];
+                }
+
+                // From global ix to local ix
+                ix[0] -= int(Local_x_start);
+
+                // If we are on the left or right of the cell determines how many cells
+                // we have to go left and right
+                std::array<int, N> xstart;
+                if (ORDER % 2 == 0) {
+                    for (int idim = 0; idim < N; idim++) {
+                        xstart[idim] = -ORDER / 2 + 1;
+#ifdef CELLCENTERSHIFTED
+                        xstart[idim] = -ORDER / 2;
+                        if (x[idim] > 0.5)
+                            xstart[idim] += 1;
+#endif
+                    }
+                } else {
+#ifndef CELLCENTERSHIFTED
+                    for (int idim = 0; idim < N; idim++) {
+                        xstart[idim] = -ORDER / 2;
+                        if (x[idim] > 0.5)
+                            xstart[idim] += 1;
+                    }
+#endif
+                }
+
+                // Interpolation
+                FloatType value = 0;
+                [[maybe_unused]] double sumweight = 0;
+                for (int i = 0; i < widthtondim; i++) {
+                    double w = 1.0;
+                    std::array<int, N> icoord;
+                    if constexpr (ORDER == 1) {
+                        icoord = ix;
+                    } else {
+                        for (int idim = 0, n = 1; idim < N; idim++, n *= ORDER) {
+                            int go_left_right_or_stay = xstart[idim] + (i / n % ORDER);
+                            ix_nbor[idim] = ix[idim] + go_left_right_or_stay;
+#ifdef CELLCENTERSHIFTED
+                            double dx = std::fabs(-x[idim] + go_left_right_or_stay + 0.5);
+#else
+                            double dx = std::fabs(-x[idim] + go_left_right_or_stay);
+#endif
+                            w *= kernel<ORDER>(dx);
+                        }
+
+                        // Periodic BC
+                        icoord[0] = ix_nbor[0];
+                        for (int idim = 1; idim < N; idim++) {
+                            icoord[idim] = ix_nbor[idim];
+                            if (icoord[idim] >= Nmesh)
+                                icoord[idim] -= Nmesh;
+                            if (icoord[idim] < 0)
+                                icoord[idim] += Nmesh;
+                        }
+                    }
+
+                    // Add up
+                    value += grid.get_real(icoord) * w;
+                    sumweight += w;
+                }
+
+#ifdef DEBUG_INTERPOL
+                // Check that the weights sum up to unity
+                assert_mpi(std::fabs(sumweight - 1.0) < 1e-3,
+                           "[interpolate_grid_to_particle_positions] Possible problem with interpolation: weights does "
+                           "not sum to unity!");
+#endif
+
+                // Store the interpolated value
+                auto weight = FML::PARTICLE::GetMass(part[ind]);
+                weight *= value;
+
+            }
+            if(FML::ThisTask == 0){
+              std::cout << "weight part0 = " << FML::PARTICLE::GetMass(part[0]) << "\n";      
+            }
+                
+            //FML::PARTICLE::swap_eulerian_and_lagrangian_positions(part.get_particles_ptr(), part.get_npart());
+            //part.communicate_particles();
+        }
+
+        template <int N, int ORDER, class T>
         void interpolate_grid_to_particle_positions(const FFTWGrid<N> & grid,
                                                     const T * part,
                                                     size_t NumPart,
-                                                    std::vector<FloatType> & interpolated_values) {
+                                                    std::vector<float> & interpolated_values) {
 
             auto nextra = get_extra_slices_needed_by_order<ORDER>();
             assert_mpi(grid.get_nmesh() > 0,
