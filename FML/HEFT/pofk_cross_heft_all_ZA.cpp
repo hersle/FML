@@ -275,7 +275,9 @@ int main() {
     if (!fp.is_open()) throw std::runtime_error("Cannot open file: " + filename);
 
     std::vector<double> logk, logpofk;
+    std::string line;
     for (;;) {
+        if (fp.peek() == '#') std::getline(fp, line); // skip comments
         double kin, pofkin;
         fp >> kin;
         if (fp.eof()) break;
