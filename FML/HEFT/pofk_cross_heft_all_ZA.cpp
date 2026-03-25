@@ -24,23 +24,23 @@
 // Parameters
 //=====================================================
 const int Ndim = 3;
-const double box = 1024.0;
+const double box = 512.0;
 
-const bool fix_amplitude = false;
-const unsigned int random_seed = 2026;
+const bool fix_amplitude = true;
+const unsigned int random_seed = 1234;
 
-const int Nmesh = 1024;
-const int Npart_1D = 1024;
+const int Nmesh = 128;
+const int Npart_1D = 128;
 const double buffer_factor = 1.5;
 
-const std::string interpolation_method = "CIC";
+const std::string interpolation_method = "PCS";
 const bool interlacing = true;
 
-const std::string filename = "pofk_lin_z0.txt";
+const std::string filename = "../COLASolver/input/example_power_spectrum_cb_z0.000.txt";
 
 // ztarget snapshot path (edit)
 const std::string pathandfileprefix_zt =
-    "/home/gbrando/FML/FML/LPT/example/snap/ZA_1234_ph1";
+    "../COLASolver/output/snapshot_TestSim_z0.000/gadget_z0.000";
 
 //=====================================================
 // Type aliases
