@@ -5,6 +5,7 @@
 #include <FML/RandomFields/GaussianRandomField.h>
 #include <FML/GadgetUtils/GadgetUtils.h>
 #include <FML/HEFT/Hessian.h>
+#include <FML/HEFT/HEFTParticle.h>
 #include <FML/ParticleTypes/SimpleParticle.h>
 #include <mpi.h>
 
