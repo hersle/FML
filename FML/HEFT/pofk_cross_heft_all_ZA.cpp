@@ -316,7 +316,10 @@ int main(int argc, char *argv[]) {
     std::vector<double> logk, logpofk;
     std::string line;
     for (;;) {
-        if (fp.peek() == '#') std::getline(fp, line); // skip comments
+        if (fp.peek() == '#') {
+            std::getline(fp, line); // skip comments
+            continue;
+        }
         double kin, pofkin;
         fp >> kin;
         if (fp.eof()) break;
