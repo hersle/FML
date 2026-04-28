@@ -24,23 +24,22 @@
 // Parameters
 //=====================================================
 const int Ndim = 3;
-const double box = 512.0;
+double box = 0.0; // to be set with e.g. -L 128.0
 
 const bool fix_amplitude = true;
-const unsigned int random_seed = 1234;
+unsigned int random_seed = 0; // to be set with e.g. -s 1234
 
-const int Nmesh = 128;
-const int Npart_1D = 128;
+int Nmesh = 0; // to be set with e.g. -N 128
+int Npart_1D = 0; // to be set with e.g. -N 128
 const double buffer_factor = 1.5;
 
 const std::string interpolation_method = "PCS";
 const bool interlacing = true;
 
-const std::string filename = "../COLASolver/input/example_power_spectrum_cb_z0.000.txt";
+std::string filename = ""; // to be set with e.g. -fP example_power_spectrum_cb_z0.000.txt
 
 // ztarget snapshot path (edit)
-const std::string pathandfileprefix_zt =
-    "../COLASolver/output/snapshot_TestSim_z0.000/gadget_z0.000";
+std::string pathandfileprefix_zt = ""; // to be set with e.g. -fg snapshot_TestSim_z0.000/gadget_z0.000
 
 //=====================================================
 // Type aliases
@@ -251,7 +250,37 @@ private:
     std::vector<long long> id_start_all, nlocal_all, id_end_all;
 };
 
-int main() {
+#include <iostream>
+#include <string>
+#include <vector>
+
+int main(int argc, char *argv[]) {
+    // Iterate through arguments starting from index 1
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+
+        if (arg == "-N" && i + 1 < argc) {
+            Npart_1D = std::stoi(argv[++i]);
+            Nmesh = Npart_1D;
+            std::cout << "Read Npart = " << Npart_1D << std::endl;
+            std::cout << "Read Nmesh = " << Nmesh << std::endl;
+        } else if (arg == "-L" && i + 1 < argc) {
+            box = std::stof(argv[++i]);
+            std::cout << "Read boxsize = " << box << std::endl;
+        } else if (arg == "-s" && i + 1 < argc) {
+            random_seed = std::stoi(argv[++i]);
+            std::cout << "Read random seed = " << random_seed << std::endl;
+        } else if (arg == "-fP" && i + 1 < argc) {
+            filename = argv[++i];
+            std::cout << "Read initial power spectrum filename = " << filename << std::endl;
+        } else if (arg == "-fg" && i + 1 < argc) {
+            pathandfileprefix_zt = argv[++i];
+            std::cout << "Read gadget snapshot filename stem = " << pathandfileprefix_zt << std::endl;
+        } else {
+            std::cerr << "Unknown argument " << arg << std::endl;
+            return 1;
+        }
+    }
 
 #ifdef MEMORY_LOGGING
     auto * mem = FML::MemoryLog::get();
