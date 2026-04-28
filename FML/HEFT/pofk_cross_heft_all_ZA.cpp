@@ -41,6 +41,8 @@ std::string filename = ""; // to be set with e.g. -fP example_power_spectrum_cb_
 // ztarget snapshot path (edit)
 std::string pathandfileprefix_zt = ""; // to be set with e.g. -fg snapshot_TestSim_z0.000/gadget_z0.000
 
+std::string output_filename = ""; // to be set with e.g. -o pofk_advected_4x4.txt
+
 //=====================================================
 // Type aliases
 //=====================================================
@@ -276,10 +278,18 @@ int main(int argc, char *argv[]) {
         } else if (arg == "-fg" && i + 1 < argc) {
             pathandfileprefix_zt = argv[++i];
             std::cout << "Read gadget snapshot filename stem = " << pathandfileprefix_zt << std::endl;
+        } else if (arg == "-o" && i + 1 < argc) {
+            output_filename = argv[++i];
+            std::cout << "Read output filename = " << output_filename << std::endl;
         } else {
             std::cerr << "Unknown argument " << arg << std::endl;
             return 1;
         }
+    }
+
+    if (output_filename == "") {
+        std::cout << "Output filename must be set with -o filename" << std::endl;
+        return 1;
     }
 
 #ifdef MEMORY_LOGGING
@@ -574,7 +584,7 @@ int main(int argc, char *argv[]) {
     // Output (10 unique spectra)
     if (FML::ThisTask == 0) {
 
-        std::ofstream out("pofk_advected_4x4.txt");
+        std::ofstream out(output_filename);
         out << "# k[h/Mpc]  "
             << "P_11            P_dd            P_d2d2            P_s2s2            "
             << "P_1d            P_1d2            P_1s2            P_dd2            P_ds2            P_d2s2\n";
@@ -600,7 +610,7 @@ int main(int argc, char *argv[]) {
             out << P[idx(2, 3)].pofk[b] << "\n";
         }
 
-        std::cout << "[OK] wrote pofk_advected_4x4.txt\n";
+        std::cout << "[OK] wrote " << output_filename << std::endl;
     }
 
 #ifdef MEMORY_LOGGING
